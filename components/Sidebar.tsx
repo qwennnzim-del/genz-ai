@@ -27,9 +27,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNewChat }) => {
       >
         {/* Sidebar Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
-          <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
-            GenzAI
-          </span>
+          <div className="flex items-center gap-3">
+            <img 
+              src="https://img.icons8.com/?size=100&id=9zVjmNkFCnhC&format=png&color=000000" 
+              alt="Logo" 
+              className="w-8 h-8"
+            />
+            <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
+              GenzAI
+            </span>
+          </div>
           <button 
             onClick={onClose}
             className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"

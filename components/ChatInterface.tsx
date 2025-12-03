@@ -2,12 +2,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Message } from '../types';
-import { Sparkles, Image as ImageIcon, Loader2, Brain, ChevronDown, ChevronRight, Globe, ExternalLink, Lightbulb } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Brain, ChevronDown, ChevronRight, Globe, ExternalLink, Lightbulb } from 'lucide-react';
 
 interface ChatInterfaceProps {
   messages: Message[];
   onSuggestionClick: (text: string) => void;
 }
+
+const AI_LOGO_URL = "https://img.icons8.com/?size=100&id=9zVjmNkFCnhC&format=png&color=000000";
 
 // Komponen internal untuk rotasi teks loading gambar
 const LoadingImageText = () => {
@@ -100,11 +102,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
     }
 
     // 2. Cek tag pembuka (untuk streaming)
-    // Gunakan split untuk mengambil konten setelah <thinking>
     if (text.includes('<thinking>')) {
       const parts = text.split('<thinking>');
-      // parts[0] adalah konten sebelum tag (biasanya kosong jika model patuh aturan)
-      // parts[1] adalah konten thinking yang sedang berjalan
       return {
         thinking: parts[1], 
         content: parts[0].trim() 
@@ -131,11 +130,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
             >
               <div className={`relative max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                 
-                {/* Identitas AI */}
+                {/* 
+                  IDENTITAS AI (Unified Avatar & Loader) 
+                  - Jika Streaming: Tampilkan Conic Gradient Border berputar.
+                  - Jika Selesai: Tampilkan Logo Biasa.
+                */}
                 {msg.role === 'model' && (
-                  <div className="flex items-center gap-2 mb-2 text-pink-600 font-bold text-sm tracking-wide">
-                    <Sparkles size={14} className="animate-pulse" />
-                    GenzAI
+                  <div className="mb-3 pl-1 animate-fadeIn">
+                    {msg.isStreaming && !msg.isGeneratingImage ? (
+                      // LOADING STATE: Conic Gradient Border
+                      <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
+                        {/* Spinning Conic Gradient */}
+                        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,transparent_40deg,#a855f7_100deg,#ec4899_180deg,#f97316_260deg,#3b82f6_360deg)] animate-spin-slow"></div>
+                        {/* Mask Inner (White Background) */}
+                        <div className="absolute inset-[2px] bg-white rounded-full"></div>
+                        {/* Logo Centered */}
+                        <img src={AI_LOGO_URL} alt="Loading" className="relative z-10 w-5 h-5 opacity-90" />
+                      </div>
+                    ) : (
+                      // FINISHED STATE: Static Logo
+                      <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
+                         <img src={AI_LOGO_URL} alt="GenzAI" className="w-8 h-8 opacity-100" />
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -161,18 +178,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
                   {content ? (
                      <ReactMarkdown>{content}</ReactMarkdown>
                   ) : (
-                    /* Loading State jika konten utama belum muncul (masih thinking atau loading awal) */
-                    msg.isStreaming && !msg.image && !thinking && (
-                      msg.isGeneratingImage ? (
+                    /* Loading State Khusus Gambar (Teks tidak perlu loading bar lagi karena sudah di avatar) */
+                    msg.isGeneratingImage && (
                         <LoadingImageText />
-                      ) : (
-                        /* Skeleton Loading Teks */
-                        <div className="space-y-2 animate-pulse mt-1">
-                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                        </div>
-                      )
                     )
                   )}
 

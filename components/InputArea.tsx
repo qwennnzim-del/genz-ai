@@ -58,23 +58,26 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
       <div className={containerClass}>
         <div className="max-w-2xl mx-auto w-full relative group">
           
-          {/* Judul Besar (Hanya muncul saat di tengah) */}
+          {/* Sapaan Tengah (Branding Logo & Judul Dihapus agar tidak Double) */}
           <div className={`text-center mb-8 transition-opacity duration-500 ${isChatStarted ? 'opacity-0 hidden' : 'opacity-100'}`}>
-            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-[length:200%_auto] animate-gradient-x tracking-tight">
-              GenzAI
+            <h1 className="text-4xl font-semibold text-gray-800 tracking-tight animate-fadeIn">
+              Hello, how can I help you?
             </h1>
-            <p className="mt-3 text-gray-500 text-lg font-medium tracking-wide">
-              Hello I'm GenzAI, how can I help you?
-            </p>
           </div>
 
-          {/* Glow Animation Container */}
-          <div className="relative rounded-[2rem] p-[2px] transition-all duration-300">
-            {/* The Pulsing Glow Border */}
-            <div className="absolute inset-0 rounded-[2rem] bg-pink-500 opacity-20 blur-sm group-hover:opacity-30 animate-pulse transition-opacity duration-500"></div>
+          {/* Input Box Container */}
+          <div className="relative rounded-[1.9rem] p-[2px] overflow-hidden group-hover:shadow-xl transition-shadow duration-300">
             
+            {/* 
+              CONIC GRADIENT BORDER EFFECT 
+            */}
+            <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,#a855f7,#ec4899,#f97316,#3b82f6,#a855f7)] animate-spin-slow opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[1px]"></div>
+            
+            {/* Fallback border halus */}
+            <div className="absolute inset-0 rounded-[1.9rem] border border-pink-100 group-hover:border-transparent transition-colors"></div>
+
             {/* Main Input Box */}
-            <div className="relative bg-white rounded-[1.9rem] shadow-xl border border-pink-100 flex flex-col overflow-hidden transition-shadow hover:shadow-pink-200">
+            <div className="relative bg-white rounded-[1.8rem] flex flex-col overflow-hidden z-10">
               
               <textarea
                 ref={textareaRef}
@@ -121,7 +124,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
         </div>
       </div>
 
-      {/* Footer Copyright - Fixed at bottom of screen, separate from input */}
+      {/* Footer Copyright */}
       <div className={`fixed bottom-4 left-0 right-0 text-center transition-all duration-500 ${isChatStarted ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'} z-10`}>
          <p className="text-xs text-gray-400">2025 Custz | Indonesian Inc.</p>
       </div>
