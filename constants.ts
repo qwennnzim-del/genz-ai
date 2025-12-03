@@ -5,7 +5,7 @@ export const MODELS: ModelOption[] = [
   {
     id: GeminiModel.FLASH_2_5,
     name: 'Genz 2.5 Pro', // Renamed from Gemini 2.5 Flash
-    description: 'Model utama GenzAI. Seimbang, cerdas, dan responsif.',
+    description: 'Model penalaran mendalam, analisis tingkat lanjut, dan pencarian informasi real-time.',
     isNew: true,
   },
   {
