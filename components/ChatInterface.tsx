@@ -1,8 +1,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Message } from '../types';
-import { Image as ImageIcon, Loader2, Brain, ChevronDown, ChevronRight, Globe, ExternalLink, Lightbulb } from 'lucide-react';
+import { Message, GeminiModel } from '../types';
+import { Image as ImageIcon, Loader2, Brain, ChevronDown, ChevronRight, Globe, ExternalLink, Lightbulb, Search } from 'lucide-react';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -10,6 +10,117 @@ interface ChatInterfaceProps {
 }
 
 const AI_LOGO_URL = "https://img.icons8.com/?size=100&id=9zVjmNkFCnhC&format=png&color=000000";
+const GOOGLE_LOGO_URL = "https://img.icons8.com/?size=100&id=V5cac0911bSc&format=png&color=000000"; // Logo Google G
+
+// --- DATA KATA-KATA RANDOM (BAHASA INGGRIS) ---
+const THINKING_TEXTS = [
+  "Deep reasoning...",
+  "Analyzing request...",
+  "Connecting nodes...",
+  "Processing context...",
+  "Understanding intent...",
+  "Formulating logic...",
+  "Synthesizing data...",
+  "Checking parameters...",
+  "Evaluating constraints...",
+  "Preparing response..."
+];
+
+const SEARCHING_TEXTS = [
+  "Searching Google...",
+  "Gathering information...",
+  "Verifying facts...",
+  "Browsing the web...",
+  "Accessing real-time data...",
+  "Looking for sources...",
+  "Comparing results...",
+  "Extracting key details...",
+  "Validating references...",
+  "Synthesizing search results..."
+];
+
+// --- KOMPONEN STREAMING AVATAR & STATUS ---
+// Mengatur logika: 0-3s Thinking (Logo App) -> >3s Searching (Logo Toggle)
+const StreamingAvatarAndStatus: React.FC<{ isPro: boolean }> = ({ isPro }) => {
+  const [phase, setPhase] = useState<'thinking' | 'searching'>('thinking');
+  const [showGoogleLogo, setShowGoogleLogo] = useState(false);
+  const [statusText, setStatusText] = useState("Thinking...");
+  const [dots, setDots] = useState("");
+
+  // 1. Timer untuk mengubah fase dari Thinking ke Searching (hanya untuk PRO)
+  useEffect(() => {
+    if (!isPro) return;
+
+    const phaseTimer = setTimeout(() => {
+      setPhase('searching');
+    }, 3000); // Setelah 3 detik, masuk mode "Searching" visual
+
+    return () => clearTimeout(phaseTimer);
+  }, [isPro]);
+
+  // 2. Logic Toggle Logo (Hanya di fase Searching)
+  useEffect(() => {
+    if (phase !== 'searching') {
+      setShowGoogleLogo(false);
+      return;
+    }
+
+    const logoInterval = setInterval(() => {
+      setShowGoogleLogo(prev => !prev);
+    }, 800); // Ganti logo setiap 0.8 detik
+
+    return () => clearInterval(logoInterval);
+  }, [phase]);
+
+  // 3. Logic Random Text
+  useEffect(() => {
+    const textPool = phase === 'thinking' ? THINKING_TEXTS : SEARCHING_TEXTS;
+    
+    const textInterval = setInterval(() => {
+      const randomText = textPool[Math.floor(Math.random() * textPool.length)];
+      setStatusText(randomText);
+    }, 1500); // Ganti teks setiap 1.5 detik
+
+    return () => clearInterval(textInterval);
+  }, [phase]);
+
+  // 4. Logic Loading Dots (...)
+  useEffect(() => {
+    const dotInterval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? "" : prev + ".");
+    }, 500);
+    return () => clearInterval(dotInterval);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-start gap-2">
+      {/* AVATAR DENGAN CONIC BORDER */}
+      <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
+        {/* Spinning Conic Gradient */}
+        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,transparent_40deg,#a855f7_100deg,#ec4899_180deg,#f97316_260deg,#3b82f6_360deg)] animate-spin-slow"></div>
+        {/* Mask Inner (White Background) */}
+        <div className="absolute inset-[2px] bg-white rounded-full"></div>
+        
+        {/* Logo Image (Switching Logic) */}
+        <div className="relative z-10 w-full h-full flex items-center justify-center transition-opacity duration-300">
+          <img 
+            src={showGoogleLogo ? GOOGLE_LOGO_URL : AI_LOGO_URL} 
+            alt="Loading" 
+            className={`w-5 h-5 transition-transform duration-300 ${showGoogleLogo ? 'scale-110' : 'scale-100'}`} 
+          />
+        </div>
+      </div>
+
+      {/* STATUS TEXT DI BAWAH AVATAR (Visualisasi Searching) */}
+      <div className="ml-1 flex items-center gap-2 animate-fadeIn">
+        <span className="text-xs font-medium bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-600">
+          {statusText}{dots}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 
 // Komponen internal untuk rotasi teks loading gambar
 const LoadingImageText = () => {
@@ -56,7 +167,7 @@ const ThinkingBox: React.FC<{ content: string; isStreaming: boolean }> = ({ cont
             <Brain size={14} className={isStreaming ? "text-pink-600 animate-pulse" : "text-gray-500"} />
           </div>
           <span className="uppercase tracking-wider">
-            {isStreaming ? "GenzAI is Thinking..." : "Thinking Process"}
+            {isStreaming ? "Thinking Process" : "Thinking Process"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -122,7 +233,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
       <div className="max-w-3xl mx-auto space-y-8">
         {messages.map((msg, idx) => {
           const { thinking, content } = parseContent(msg.text);
-          
+          // Deteksi apakah ini model Pro untuk efek visual searching
+          const isProModel = true; // Di sini kita asumsikan true untuk visual, idealnya cek session config
+
           return (
             <div 
               key={idx} 
@@ -131,22 +244,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
               <div className={`relative max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                 
                 {/* 
-                  IDENTITAS AI (Unified Avatar & Loader) 
-                  - Jika Streaming: Tampilkan Conic Gradient Border berputar.
-                  - Jika Selesai: Tampilkan Logo Biasa.
+                  IDENTITAS AI 
                 */}
                 {msg.role === 'model' && (
                   <div className="mb-3 pl-1 animate-fadeIn">
                     {msg.isStreaming && !msg.isGeneratingImage ? (
-                      // LOADING STATE: Conic Gradient Border
-                      <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
-                        {/* Spinning Conic Gradient */}
-                        <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,transparent_40deg,#a855f7_100deg,#ec4899_180deg,#f97316_260deg,#3b82f6_360deg)] animate-spin-slow"></div>
-                        {/* Mask Inner (White Background) */}
-                        <div className="absolute inset-[2px] bg-white rounded-full"></div>
-                        {/* Logo Centered */}
-                        <img src={AI_LOGO_URL} alt="Loading" className="relative z-10 w-5 h-5 opacity-90" />
-                      </div>
+                      // LOADING STATE KHUSUS (Thinking -> Searching Visuals)
+                      <StreamingAvatarAndStatus isPro={isProModel} />
                     ) : (
                       // FINISHED STATE: Static Logo
                       <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
@@ -178,7 +282,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
                   {content ? (
                      <ReactMarkdown>{content}</ReactMarkdown>
                   ) : (
-                    /* Loading State Khusus Gambar (Teks tidak perlu loading bar lagi karena sudah di avatar) */
+                    /* Loading State Khusus Gambar */
                     msg.isGeneratingImage && (
                         <LoadingImageText />
                     )

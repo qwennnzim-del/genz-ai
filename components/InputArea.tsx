@@ -1,12 +1,12 @@
 
 import React, { useState, useRef } from 'react';
-import { ArrowUp, Paperclip, AudioLines, ChevronUp } from 'lucide-react';
-import { GeminiModel } from '../types';
+import { ArrowUp, Paperclip, AudioLines, ChevronUp, X, FileImage, FileText } from 'lucide-react';
+import { GeminiModel, Attachment } from '../types';
 import { MODELS } from '../constants';
 import ModelSelector from './ModelSelector';
 
 interface InputAreaProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, attachment?: Attachment) => void;
   isChatStarted: boolean;
   isLoading: boolean;
   selectedModel: GeminiModel;
@@ -15,13 +15,17 @@ interface InputAreaProps {
 
 const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading, selectedModel, onSelectModel }) => {
   const [text, setText] = useState('');
+  const [attachment, setAttachment] = useState<Attachment | undefined>(undefined);
   const [isModelSelectorOpen, setModelSelectorOpen] = useState(false);
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
-    if (text.trim() && !isLoading) {
-      onSend(text);
+    if ((text.trim() || attachment) && !isLoading) {
+      onSend(text, attachment);
       setText('');
+      setAttachment(undefined);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -41,6 +45,30 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
     e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Hapus prefix data URL (misal: "data:image/png;base64,") untuk dikirim ke API
+        const base64Data = base64String.split(',')[1];
+        
+        setAttachment({
+          mimeType: file.type,
+          data: base64Data
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset value agar bisa select file yang sama
+    e.target.value = '';
+  };
+
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
   // Posisi Container: Tengah jika belum mulai, Bawah jika sudah mulai
   const containerClass = isChatStarted
     ? "fixed bottom-8 left-0 right-0 px-4 transition-all duration-700 ease-in-out z-20"
@@ -58,19 +86,46 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
       <div className={containerClass}>
         <div className="max-w-2xl mx-auto w-full relative group">
           
-          {/* Sapaan Tengah (Branding Logo & Judul Dihapus agar tidak Double) */}
+          {/* Sapaan Tengah */}
           <div className={`text-center mb-8 transition-opacity duration-500 ${isChatStarted ? 'opacity-0 hidden' : 'opacity-100'}`}>
             <h1 className="text-4xl font-semibold text-gray-800 tracking-tight animate-fadeIn">
               Hello, how can I help you?
             </h1>
           </div>
 
+          {/* Attachment Preview (Floating above input) */}
+          {attachment && (
+            <div className="absolute -top-16 left-4 z-10 animate-fadeIn">
+              <div className="relative bg-white p-2 rounded-xl shadow-lg border border-gray-100 flex items-center gap-3 pr-8">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                  {attachment.mimeType.startsWith('image/') ? (
+                    <img 
+                      src={`data:${attachment.mimeType};base64,${attachment.data}`} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <FileText className="text-gray-500" size={20} />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                   <span className="text-xs font-bold text-gray-700">File attached</span>
+                   <span className="text-[10px] text-gray-400 uppercase">{attachment.mimeType.split('/')[1]}</span>
+                </div>
+                <button 
+                  onClick={() => setAttachment(undefined)}
+                  className="absolute top-1 right-1 p-1 bg-gray-200 rounded-full hover:bg-red-100 hover:text-red-500 transition-colors"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Input Box Container */}
           <div className="relative rounded-[1.9rem] p-[2px] overflow-hidden group-hover:shadow-xl transition-shadow duration-300">
             
-            {/* 
-              CONIC GRADIENT BORDER EFFECT 
-            */}
+            {/* CONIC GRADIENT BORDER EFFECT */}
             <div className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,#a855f7,#ec4899,#f97316,#3b82f6,#a855f7)] animate-spin-slow opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[1px]"></div>
             
             {/* Fallback border halus */}
@@ -90,6 +145,15 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
                 style={{ paddingTop: '1.2rem' }}
               />
 
+              {/* Hidden File Input */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileSelect} 
+                className="hidden" 
+                accept="image/*,application/pdf,text/plain"
+              />
+
               <div className="flex items-center justify-between px-2 pb-2 mt-1">
                 <button 
                   onClick={() => setModelSelectorOpen(true)}
@@ -100,7 +164,11 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
                 </button>
 
                 <div className="flex items-center gap-2 mr-2 mb-2">
-                   <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                   <button 
+                    onClick={triggerFileSelect}
+                    className={`p-2 rounded-full transition-colors ${attachment ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    title="Upload File/Image"
+                   >
                      <Paperclip size={20} />
                    </button>
                    <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
@@ -108,9 +176,9 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
                    </button>
                    <button 
                     onClick={handleSubmit}
-                    disabled={!text.trim() || isLoading}
+                    disabled={(!text.trim() && !attachment) || isLoading}
                     className={`p-3 rounded-full transition-all duration-200 ${
-                      text.trim() && !isLoading
+                      (text.trim() || attachment) && !isLoading
                         ? 'bg-gray-900 text-white shadow-lg transform hover:scale-105 active:scale-95' 
                         : 'bg-gray-100 text-gray-300 cursor-not-allowed'
                     }`}

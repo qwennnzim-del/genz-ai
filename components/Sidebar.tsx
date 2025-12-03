@@ -1,14 +1,27 @@
 
 import React from 'react';
-import { X, MessageSquare, Settings, HelpCircle, Plus, History } from 'lucide-react';
+import { X, MessageSquare, Settings, HelpCircle, Plus, History, Trash2 } from 'lucide-react';
+import { ChatSession } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onNewChat: () => void;
+  sessions: ChatSession[];
+  currentSessionId: string | null;
+  onSelectSession: (sessionId: string) => void;
+  onDeleteSession: (sessionId: string, e: React.MouseEvent) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNewChat }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  onClose, 
+  onNewChat, 
+  sessions, 
+  currentSessionId, 
+  onSelectSession,
+  onDeleteSession
+}) => {
   return (
     <>
       {/* Backdrop Overlay */}
@@ -46,13 +59,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNewChat }) => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6 scrollbar-hide">
           
           {/* New Chat Button */}
           <button 
             onClick={() => {
               onNewChat();
-              onClose();
+              onClose(); // Optional: close sidebar on new chat
             }}
             className="w-full flex items-center gap-3 px-4 py-3 bg-gray-900 text-white rounded-xl shadow-lg hover:bg-gray-800 hover:scale-[1.02] active:scale-95 transition-all duration-200 group"
           >
@@ -69,21 +82,39 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onNewChat }) => {
               Recent
             </div>
             
-            {/* Placeholder Items */}
-            {[
-              "Belajar React Hooks",
-              "Resep Nasi Goreng",
-              "Ide Bisnis 2025",
-              "Generate Gambar Kucing"
-            ].map((item, idx) => (
-              <button 
-                key={idx}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 rounded-lg hover:bg-pink-50 hover:text-pink-600 transition-colors text-left group"
-              >
-                <MessageSquare size={16} className="text-gray-400 group-hover:text-pink-400 transition-colors" />
-                <span className="truncate">{item}</span>
-              </button>
-            ))}
+            {sessions.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-gray-400 italic">
+                No chat history yet.
+                <br />Start a conversation!
+              </div>
+            ) : (
+              sessions.map((session) => (
+                <div 
+                  key={session.id}
+                  className={`group relative w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all cursor-pointer ${
+                    currentSessionId === session.id 
+                      ? 'bg-pink-50 text-pink-700 font-medium' 
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => {
+                    onSelectSession(session.id);
+                    onClose();
+                  }}
+                >
+                  <MessageSquare size={16} className={currentSessionId === session.id ? "text-pink-500" : "text-gray-400"} />
+                  <span className="truncate flex-1">{session.title}</span>
+                  
+                  {/* Delete Button (Visible on Hover) */}
+                  <button
+                    onClick={(e) => onDeleteSession(session.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-all absolute right-2"
+                    title="Delete Chat"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
