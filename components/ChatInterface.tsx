@@ -10,7 +10,7 @@ interface ChatInterfaceProps {
 }
 
 const AI_LOGO_URL = "https://img.icons8.com/?size=100&id=9zVjmNkFCnhC&format=png&color=000000";
-const GOOGLE_LOGO_URL = "https://img.icons8.com/?size=100&id=V5cac0911bSc&format=png&color=000000"; // Logo Google G
+const GOOGLE_LOGO_URL = "https://img.icons8.com/?size=100&id=17949&format=png&color=000000"; // Logo Google G Updated
 
 // --- DATA KATA-KATA RANDOM (BAHASA INGGRIS) ---
 const THINKING_TEXTS = [
@@ -201,27 +201,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionCli
 
   // Helper untuk memisahkan konten Thinking dan Jawaban
   const parseContent = (text: string) => {
-    // 1. Cek tag lengkap
-    const thinkingRegex = /<thinking>([\s\S]*?)<\/thinking>/;
-    const match = text.match(thinkingRegex);
+    // 1. Cek tag lengkap (Regex yang lebih robust terhadap spasi dan case)
+    const completeRegex = /<\s*thinking\s*>([\s\S]*?)<\/\s*thinking\s*>/i;
+    const match = text.match(completeRegex);
     
     if (match) {
       return {
-        thinking: match[1],
-        content: text.replace(thinkingRegex, '').trim()
+        thinking: match[1].trim(),
+        content: text.replace(completeRegex, '').trim()
       };
     }
 
-    // 2. Cek tag pembuka (untuk streaming)
-    if (text.includes('<thinking>')) {
-      const parts = text.split('<thinking>');
+    // 2. Cek tag pembuka (untuk streaming atau jika tag penutup belum muncul)
+    const openTagRegex = /<\s*thinking\s*>/i;
+    if (openTagRegex.test(text)) {
+      const parts = text.split(openTagRegex);
+      // parts[0] adalah konten sebelum tag (biasanya kosong)
+      // parts[1] adalah konten thinking yang sedang berjalan
       return {
-        thinking: parts[1], 
-        content: parts[0].trim() 
+        thinking: parts[1] ? parts[1].trim() : "", 
+        content: parts[0] ? parts[0].trim() : "" 
       };
     }
 
-    // 3. Tidak ada thinking
+    // 3. Tidak ada thinking tag sama sekali
     return {
       thinking: null,
       content: text
