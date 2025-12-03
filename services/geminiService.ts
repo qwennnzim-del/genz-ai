@@ -1,26 +1,20 @@
-// services/geminiService.ts
 
-// Kita tidak mengimport GoogleGenerativeAI di sini lagi
-// karena file ini berjalan di browser. Kita panggil API backend.
+import { Attachment } from '../types';
 
 export const streamGeminiResponse = async function* (
   modelId: string,
   prompt: string,
-  history: { role: string; parts: { text: string }[] }[]
+  history: { role: string; parts: { text: string }[] }[],
+  attachment?: Attachment
 ) {
   try {
-    // --- SANITIZER LOGIC (PENCEGAH KEBOCORAN KONTEKS) ---
-    // Jika model yang dipilih BUKAN 'gemini-2.5-flash' (Genz 2.5 Pro),
-    // kita harus menghapus semua tag <thinking>...</thinking> dari history chat sebelumnya.
-    // Ini mencegah model lain (seperti Flash 2.0) meniru format "Thinking Process" karena melihatnya di history.
-    
+    // --- SANITIZER LOGIC ---
     let processedHistory = history;
 
     if (modelId !== 'gemini-2.5-flash') {
       processedHistory = history.map(msg => ({
         role: msg.role,
         parts: msg.parts.map(part => ({
-          // Hapus blok thinking menggunakan Regex
           text: part.text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim()
         }))
       }));
@@ -34,7 +28,8 @@ export const streamGeminiResponse = async function* (
       body: JSON.stringify({
         modelId,
         prompt,
-        history: processedHistory // Gunakan history yang sudah dibersihkan
+        history: processedHistory,
+        attachment // Kirim attachment ke backend
       }),
     });
 
@@ -55,17 +50,13 @@ export const streamGeminiResponse = async function* (
       const chunk = decoder.decode(value, { stream: true });
       buffer += chunk;
       
-      // Split buffer by newline because backend sends JSON string + \n
       const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // Keep incomplete line in buffer
+      buffer = lines.pop() || ""; 
 
       for (const line of lines) {
         if (line.trim() !== "") {
           try {
             const parsed = JSON.parse(line);
-            
-            // Yield object that matches App.tsx expectation
-            // App.tsx expects chunk.text() and chunk.candidates...
             yield {
               text: () => parsed.text || "",
               candidates: parsed.groundingMetadata ? [{ groundingMetadata: parsed.groundingMetadata }] : []
@@ -92,11 +83,9 @@ export const enhanceImagePrompt = async (originalPrompt: string): Promise<string
     });
 
     if (!response.ok) return originalPrompt;
-    
     const data = await response.json();
     return data.enhancedText || originalPrompt;
   } catch (error) {
-    console.warn("API enhancement failed:", error);
     return originalPrompt;
   }
 };
@@ -115,9 +104,8 @@ export const generateImage = async (prompt: string): Promise<string | null> => {
     }
 
     const data = await response.json();
-    return data.image; // Base64 string
+    return data.image; 
   } catch (error) {
-    console.error("Error calling Image API:", error);
     throw error;
   }
 };
