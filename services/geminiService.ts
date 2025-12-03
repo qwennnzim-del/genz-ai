@@ -9,6 +9,23 @@ export const streamGeminiResponse = async function* (
   history: { role: string; parts: { text: string }[] }[]
 ) {
   try {
+    // --- SANITIZER LOGIC (PENCEGAH KEBOCORAN KONTEKS) ---
+    // Jika model yang dipilih BUKAN 'gemini-2.5-flash' (Genz 2.5 Pro),
+    // kita harus menghapus semua tag <thinking>...</thinking> dari history chat sebelumnya.
+    // Ini mencegah model lain (seperti Flash 2.0) meniru format "Thinking Process" karena melihatnya di history.
+    
+    let processedHistory = history;
+
+    if (modelId !== 'gemini-2.5-flash') {
+      processedHistory = history.map(msg => ({
+        role: msg.role,
+        parts: msg.parts.map(part => ({
+          // Hapus blok thinking menggunakan Regex
+          text: part.text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim()
+        }))
+      }));
+    }
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -17,7 +34,7 @@ export const streamGeminiResponse = async function* (
       body: JSON.stringify({
         modelId,
         prompt,
-        history
+        history: processedHistory // Gunakan history yang sudah dibersihkan
       }),
     });
 
