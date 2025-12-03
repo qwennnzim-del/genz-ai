@@ -1,40 +1,35 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Ambil API Key dari Environment Variable Vercel
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export default async function handler(req: any, res: any) {
-  // Hanya terima method POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { modelId, prompt, history } = req.body;
+    const { modelId, prompt, history, attachment } = req.body;
 
     let tools = undefined;
-    let systemInstruction = "Anda adalah GenzAI. Jawablah dengan sopan, cerdas, dan menggunakan format Markdown yang rapi. Selalu sertakan identitas 'GenzAI' jika diminta atau relevan. Gunakan Bahasa Indonesia yang baik.";
+    let systemInstruction = "Anda adalah GenzAI. Jawablah dengan sopan, cerdas, dan menggunakan format Markdown yang rapi. Selalu sertakan identitas 'GenzAI' jika diminta atau relevan.";
 
-    // Konfigurasi Khusus untuk Genz 2.5 Pro (gemini-2.5-flash)
     if (modelId === 'gemini-2.5-flash') {
       tools = [{ googleSearch: {} }];
       systemInstruction += `
-      \n[SYSTEM NOTICE: CHAIN OF THOUGHT REQUIRED]
-      Anda berjalan pada mode "Genz 2.5 Pro" yang memiliki kemampuan reasoning tingkat tinggi.
+      \n[SYSTEM NOTICE: CHAIN OF THOUGHT & VISION ENABLED]
+      Anda adalah "Genz 2.5 Pro". Anda dapat melihat gambar/file jika user melampirkannya.
       
       ATURAN WAJIB:
       1. JANGAN langsung menjawab pertanyaan user.
       2. MULAI setiap respon Anda dengan blok <thinking> ... </thinking>.
-      3. Di dalam blok thinking, uraikan analisis langkah demi langkah, strategi pencarian informasi (jika perlu), dan struktur jawaban.
-      4. Setelah tag </thinking> tertutup, barulah berikan jawaban akhir Anda kepada user.
-      
-      Format Respon:
-      <thinking>
-      - Analisis maksud user: ...
-      - Rencana jawaban: ...
-      </thinking>
-      (Jawaban Akhir Anda Disini)
+      3. Analisis input (teks maupun gambar) secara mendalam di dalam blok thinking.
+      4. Jika pertanyaan membutuhkan informasi terkini, gunakan Google Search.
       `;
+      
+      // --- ARTIFICIAL DELAY UNTUK VISUALISASI ---
+      // Menunggu 4 detik agar animasi "Searching" & Logo Toggle di frontend terlihat oleh user
+      await new Promise(resolve => setTimeout(resolve, 4000));
     }
 
     const model = genAI.getGenerativeModel({
@@ -43,16 +38,29 @@ export default async function handler(req: any, res: any) {
       tools: tools,
     });
 
+    // Konstruksi Pesan Saat Ini
+    let userParts: any[] = [{ text: prompt }];
+
+    // Jika ada attachment (gambar/file), tambahkan ke parts pesan
+    if (attachment && attachment.data && attachment.mimeType) {
+      userParts.push({
+        inlineData: {
+          data: attachment.data,
+          mimeType: attachment.mimeType
+        }
+      });
+    }
+    
     const chat = model.startChat({
-      history: history || [],
+      history: history || [], 
       generationConfig: {
         temperature: 0.7,
       },
     });
 
-    const result = await chat.sendMessageStream(prompt);
+    // Kirim pesan (Text + Image Part)
+    const result = await chat.sendMessageStream(userParts);
 
-    // Set header agar client tahu ini adalah streaming text
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Transfer-Encoding', 'chunked');
 
@@ -60,8 +68,6 @@ export default async function handler(req: any, res: any) {
       const chunkText = chunk.text();
       const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata;
       
-      // Kirim data sebagai JSON string per baris agar mudah diparsing di frontend
-      // Kita bungkus dalam JSON stringified
       const data = JSON.stringify({
         text: chunkText,
         groundingMetadata: groundingMetadata
