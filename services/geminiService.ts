@@ -1,11 +1,12 @@
 
-import { Attachment } from '../types';
+import { Attachment, Language } from '../types';
 
 export const streamGeminiResponse = async function* (
   modelId: string,
   prompt: string,
   history: { role: string; parts: { text: string }[] }[],
-  attachment?: Attachment
+  attachment?: Attachment,
+  language: Language = 'id' // Default ID
 ) {
   try {
     // --- SANITIZER LOGIC ---
@@ -29,7 +30,8 @@ export const streamGeminiResponse = async function* (
         modelId,
         prompt,
         history: processedHistory,
-        attachment // Kirim attachment ke backend
+        attachment,
+        language // Kirim preferensi bahasa
       }),
     });
 
@@ -74,38 +76,30 @@ export const streamGeminiResponse = async function* (
   }
 };
 
-export const enhanceImagePrompt = async (originalPrompt: string): Promise<string> => {
-  try {
-    const response = await fetch('/api/enhance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: originalPrompt }),
-    });
-
-    if (!response.ok) return originalPrompt;
-    const data = await response.json();
-    return data.enhancedText || originalPrompt;
-  } catch (error) {
-    return originalPrompt;
-  }
-};
-
-export const generateImage = async (prompt: string): Promise<string | null> => {
+// --- FUNGSI BARU UNTUK HUGGING FACE IMAGE ---
+export const generateImage = async (prompt: string): Promise<string> => {
   try {
     const response = await fetch('/api/image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ prompt }),
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || "Failed to generate image");
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.details || response.statusText);
     }
 
     const data = await response.json();
-    return data.image; 
+    if (data.image) {
+      return data.image; // Base64 string
+    } else {
+      throw new Error("No image data returned");
+    }
   } catch (error) {
+    console.error("Error generating image:", error);
     throw error;
   }
 };
