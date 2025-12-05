@@ -20,7 +20,7 @@ export const MODELS: ModelOption[] = [
   },
   {
     id: GeminiModel.IMAGE_GEN,
-    name: 'Genz Art (SDXL)',
+    name: 'Genz Art (Flux)',
     description: 'Buat gambar artistik HD menggunakan Stable Diffusion XL.',
     isNew: true,
   },

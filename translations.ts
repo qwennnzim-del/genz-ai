@@ -1,7 +1,58 @@
 
-import { Language } from './types';
+import { Language, GeminiModel } from './types';
 
-export const TRANSLATIONS = {
+// Tipe data helper untuk translasi model
+type ModelTranslation = {
+  [key in GeminiModel]: {
+    name: string;
+    description: string;
+  }
+};
+
+interface TranslationStructure {
+  greeting: string;
+  placeholderDefault: string;
+  placeholderImage: string;
+  fileAttached: string;
+  sidebar: {
+    newChat: string;
+    recent: string;
+    noHistory: string;
+    settings: string;
+    help: string;
+    deleteConfirm: string;
+  };
+  settings: {
+    title: string;
+    language: string;
+    preferences: string;
+    darkMode: string;
+    darkModeDesc: string;
+    stream: string;
+    streamDesc: string;
+    storage: string;
+    clearHistory: string;
+    clearDesc: string;
+    confirmDelete: string;
+    footer: string;
+  };
+  chat: {
+    thinkingHeader: string;
+    analysis: string;
+    sources: string;
+    thinkingStatus: string[];
+    searchingStatus: string[];
+    generatingImage: string[];
+    copy: string;
+    share: string;
+  };
+  modelSelector: {
+    title: string;
+  };
+  models: ModelTranslation;
+}
+
+export const TRANSLATIONS: Record<Language, TranslationStructure> = {
   id: {
     greeting: "Halo, ada yang bisa saya bantu?",
     placeholderDefault: "Ketik pesan ke GenzAI...",
@@ -27,7 +78,7 @@ export const TRANSLATIONS = {
       clearHistory: "Hapus Semua Riwayat",
       clearDesc: "Hapus semua chat secara permanen",
       confirmDelete: "Yakin Hapus?",
-      footer: "GenzAI v2.5.0 • Ditenagai oleh Google Gemini & Hugging Face"
+      footer: "GenzAI v2.5.0 • Ditenagai oleh Google Gemini & Pollinations AI"
     },
     chat: {
       thinkingHeader: "Proses Berpikir",
@@ -42,14 +93,32 @@ export const TRANSLATIONS = {
         "Menjelajahi web...", "Mengakses data real-time...", "Mengekstrak detail..."
       ],
       generatingImage: [
-        "Creating masterpiece...", "Mixing colors...", "Sketching outlines...", 
-        "Applying textures...", "Rendering lighting...", "Adding details..."
+        "Membuat mahakarya...", "Mencampur warna...", "Membuat sketsa...", 
+        "Menerapkan tekstur...", "Rendering pencahayaan...", "Menambahkan detail..."
       ],
       copy: "Salin",
       share: "Bagikan"
     },
     modelSelector: {
       title: "Pilih Model"
+    },
+    models: {
+      [GeminiModel.FLASH_2_5]: {
+        name: "Genz 2.5 Pro",
+        description: "Penalaran Mendalam & Pencarian Real-time."
+      },
+      [GeminiModel.FLASH_2_0]: {
+        name: "Genz 2.0 Flash",
+        description: "Kemampuan reasoning tingkat lanjut untuk tugas kompleks."
+      },
+      [GeminiModel.FLASH_LITE_2_0]: {
+        name: "Genz 2.0 Lite",
+        description: "Versi paling ringan untuk kecepatan respons maksimal."
+      },
+      [GeminiModel.IMAGE_GEN]: {
+        name: "Genz Art (Flux)",
+        description: "Buat gambar realistis HD menggunakan model Flux."
+      }
     }
   },
   en: {
@@ -77,7 +146,7 @@ export const TRANSLATIONS = {
       clearHistory: "Clear All History",
       clearDesc: "Delete all chats permanently",
       confirmDelete: "Are you sure?",
-      footer: "GenzAI v2.5.0 • Powered by Google Gemini & Hugging Face"
+      footer: "GenzAI v2.5.0 • Powered by Google Gemini & Pollinations AI"
     },
     chat: {
       thinkingHeader: "Thinking Process",
@@ -100,6 +169,24 @@ export const TRANSLATIONS = {
     },
     modelSelector: {
       title: "Select Model"
+    },
+    models: {
+      [GeminiModel.FLASH_2_5]: {
+        name: "Genz 2.5 Pro",
+        description: "Deep reasoning & Real-time Google Search."
+      },
+      [GeminiModel.FLASH_2_0]: {
+        name: "Genz 2.0 Flash",
+        description: "Advanced reasoning capabilities for complex tasks."
+      },
+      [GeminiModel.FLASH_LITE_2_0]: {
+        name: "Genz 2.0 Lite",
+        description: "Lightweight version for maximum response speed."
+      },
+      [GeminiModel.IMAGE_GEN]: {
+        name: "Genz Art (Flux)",
+        description: "Create HD realistic images using Flux model."
+      }
     }
   },
   jp: {
@@ -127,7 +214,7 @@ export const TRANSLATIONS = {
       clearHistory: "履歴をすべて消去",
       clearDesc: "すべてのチャットを完全に削除",
       confirmDelete: "本当に削除しますか？",
-      footer: "GenzAI v2.5.0 • Google Gemini & Hugging Face 搭載"
+      footer: "GenzAI v2.5.0 • Google Gemini & Pollinations AI 搭載"
     },
     chat: {
       thinkingHeader: "思考プロセス",
@@ -150,6 +237,24 @@ export const TRANSLATIONS = {
     },
     modelSelector: {
       title: "モデルを選択"
+    },
+    models: {
+      [GeminiModel.FLASH_2_5]: {
+        name: "Genz 2.5 Pro",
+        description: "深い推論とリアルタイムGoogle検索。"
+      },
+      [GeminiModel.FLASH_2_0]: {
+        name: "Genz 2.0 Flash",
+        description: "複雑なタスクのための高度な推論能力。"
+      },
+      [GeminiModel.FLASH_LITE_2_0]: {
+        name: "Genz 2.0 Lite",
+        description: "最大応答速度のための最軽量バージョン。"
+      },
+      [GeminiModel.IMAGE_GEN]: {
+        name: "Genz Art (Flux)",
+        description: "Fluxモデルを使用したHDリアル画像の作成。"
+      }
     }
   }
 };
