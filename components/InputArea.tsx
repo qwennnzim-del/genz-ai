@@ -1,8 +1,9 @@
 
 import React, { useState, useRef } from 'react';
-import { ArrowUp, Paperclip, AudioLines, ChevronUp, X, FileImage, FileText } from 'lucide-react';
-import { GeminiModel, Attachment } from '../types';
+import { ArrowUp, Paperclip, AudioLines, ChevronUp, X, FileText } from 'lucide-react';
+import { GeminiModel, Attachment, Language } from '../types';
 import { MODELS } from '../constants';
+import { TRANSLATIONS } from '../translations';
 import ModelSelector from './ModelSelector';
 
 interface InputAreaProps {
@@ -11,15 +12,18 @@ interface InputAreaProps {
   isLoading: boolean;
   selectedModel: GeminiModel;
   onSelectModel: (model: GeminiModel) => void;
+  language: Language;
 }
 
-const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading, selectedModel, onSelectModel }) => {
+const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading, selectedModel, onSelectModel, language }) => {
   const [text, setText] = useState('');
   const [attachment, setAttachment] = useState<Attachment | undefined>(undefined);
   const [isModelSelectorOpen, setModelSelectorOpen] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const t = TRANSLATIONS[language];
 
   const handleSubmit = () => {
     if ((text.trim() || attachment) && !isLoading) {
@@ -51,7 +55,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        // Hapus prefix data URL (misal: "data:image/png;base64,") untuk dikirim ke API
+        // Hapus prefix data URL
         const base64Data = base64String.split(',')[1];
         
         setAttachment({
@@ -61,7 +65,6 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
       };
       reader.readAsDataURL(file);
     }
-    // Reset value agar bisa select file yang sama
     e.target.value = '';
   };
 
@@ -69,7 +72,6 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
     fileInputRef.current?.click();
   };
 
-  // Posisi Container: Tengah jika belum mulai, Bawah jika sudah mulai
   const containerClass = isChatStarted
     ? "fixed bottom-8 left-0 right-0 px-4 transition-all duration-700 ease-in-out z-20"
     : "fixed top-1/2 left-0 right-0 -translate-y-1/2 px-4 transition-all duration-700 ease-in-out z-20";
@@ -77,19 +79,19 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
   const modelName = MODELS.find(m => m.id === selectedModel)?.name || 'Genz 2.5 Pro';
   
   // Logic Placeholder Dinamis
-  const placeholderText = selectedModel === GeminiModel.FLASH_IMAGE_2_5 
-    ? "Describe the image you want to create..." 
-    : "Message GenzAI...";
+  const placeholderText = selectedModel === GeminiModel.IMAGE_GEN 
+    ? t.placeholderImage 
+    : t.placeholderDefault;
 
   return (
     <>
       <div className={containerClass}>
         <div className="max-w-2xl mx-auto w-full relative group">
           
-          {/* Sapaan Tengah */}
+          {/* Sapaan Tengah (Translated) */}
           <div className={`text-center mb-8 transition-opacity duration-500 ${isChatStarted ? 'opacity-0 hidden' : 'opacity-100'}`}>
             <h1 className="text-4xl font-semibold text-gray-800 tracking-tight animate-fadeIn">
-              Hello, how can I help you?
+              {t.greeting}
             </h1>
           </div>
 
@@ -109,7 +111,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
                   )}
                 </div>
                 <div className="flex flex-col">
-                   <span className="text-xs font-bold text-gray-700">File attached</span>
+                   <span className="text-xs font-bold text-gray-700">{t.fileAttached}</span>
                    <span className="text-[10px] text-gray-400 uppercase">{attachment.mimeType.split('/')[1]}</span>
                 </div>
                 <button 
@@ -166,7 +168,8 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
                 <div className="flex items-center gap-2 mr-2 mb-2">
                    <button 
                     onClick={triggerFileSelect}
-                    className={`p-2 rounded-full transition-colors ${attachment ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    disabled={selectedModel === GeminiModel.IMAGE_GEN} // Disable upload file jika mode gambar
+                    className={`p-2 rounded-full transition-colors ${attachment ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} ${selectedModel === GeminiModel.IMAGE_GEN ? 'opacity-30 cursor-not-allowed' : ''}`}
                     title="Upload File/Image"
                    >
                      <Paperclip size={20} />
@@ -192,16 +195,12 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
         </div>
       </div>
 
-      {/* Footer Copyright */}
-      <div className={`fixed bottom-4 left-0 right-0 text-center transition-all duration-500 ${isChatStarted ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'} z-10`}>
-         <p className="text-xs text-gray-400">2025 Custz | Indonesian Inc.</p>
-      </div>
-
       <ModelSelector 
         isOpen={isModelSelectorOpen}
         onClose={() => setModelSelectorOpen(false)}
         currentModel={selectedModel}
         onSelectModel={onSelectModel}
+        language={language}
       />
     </>
   );

@@ -1,107 +1,78 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Message, GeminiModel } from '../types';
-import { Image as ImageIcon, Loader2, Brain, ChevronDown, ChevronRight, Globe, ExternalLink, Lightbulb, Search } from 'lucide-react';
+import { Message, GeminiModel, Language } from '../types';
+import { TRANSLATIONS } from '../translations';
+import { 
+  Image as ImageIcon, 
+  Loader2, 
+  Brain, 
+  ChevronDown, 
+  ChevronRight, 
+  Globe, 
+  ExternalLink, 
+  Lightbulb, 
+  Copy, 
+  Heart, 
+  Share2, 
+  Check,
+  X,
+  FileText
+} from 'lucide-react';
 
 interface ChatInterfaceProps {
   messages: Message[];
   onSuggestionClick: (text: string) => void;
+  language: Language;
 }
 
 const AI_LOGO_URL = "https://img.icons8.com/?size=100&id=9zVjmNkFCnhC&format=png&color=000000";
-const GOOGLE_LOGO_URL = "https://img.icons8.com/?size=100&id=17949&format=png&color=000000"; // Logo Google G Updated
+const GOOGLE_LOGO_URL = "https://img.icons8.com/?size=100&id=17949&format=png&color=000000";
 
-// --- DATA KATA-KATA RANDOM (BAHASA INGGRIS) ---
-const THINKING_TEXTS = [
-  "Deep reasoning...",
-  "Analyzing request...",
-  "Connecting nodes...",
-  "Processing context...",
-  "Understanding intent...",
-  "Formulating logic...",
-  "Synthesizing data...",
-  "Checking parameters...",
-  "Evaluating constraints...",
-  "Preparing response..."
-];
+// --- COMPONENTS ---
 
-const SEARCHING_TEXTS = [
-  "Searching Google...",
-  "Gathering information...",
-  "Verifying facts...",
-  "Browsing the web...",
-  "Accessing real-time data...",
-  "Looking for sources...",
-  "Comparing results...",
-  "Extracting key details...",
-  "Validating references...",
-  "Synthesizing search results..."
-];
-
-// --- KOMPONEN STREAMING AVATAR & STATUS ---
-// Mengatur logika: 0-3s Thinking (Logo App) -> >3s Searching (Logo Toggle)
-const StreamingAvatarAndStatus: React.FC<{ isPro: boolean }> = ({ isPro }) => {
+// 1. Streaming Avatar & Status
+const StreamingAvatarAndStatus: React.FC<{ isPro: boolean; language: Language }> = ({ isPro, language }) => {
   const [phase, setPhase] = useState<'thinking' | 'searching'>('thinking');
   const [showGoogleLogo, setShowGoogleLogo] = useState(false);
-  const [statusText, setStatusText] = useState("Thinking...");
+  const [statusText, setStatusText] = useState("");
   const [dots, setDots] = useState("");
 
-  // 1. Timer untuk mengubah fase dari Thinking ke Searching (hanya untuk PRO)
+  const t = TRANSLATIONS[language].chat;
+
   useEffect(() => {
     if (!isPro) return;
-
-    const phaseTimer = setTimeout(() => {
-      setPhase('searching');
-    }, 3000); // Setelah 3 detik, masuk mode "Searching" visual
-
+    const phaseTimer = setTimeout(() => { setPhase('searching'); }, 3000);
     return () => clearTimeout(phaseTimer);
   }, [isPro]);
 
-  // 2. Logic Toggle Logo (Hanya di fase Searching)
   useEffect(() => {
-    if (phase !== 'searching') {
-      setShowGoogleLogo(false);
-      return;
-    }
-
-    const logoInterval = setInterval(() => {
-      setShowGoogleLogo(prev => !prev);
-    }, 800); // Ganti logo setiap 0.8 detik
-
+    if (phase !== 'searching') { setShowGoogleLogo(false); return; }
+    const logoInterval = setInterval(() => { setShowGoogleLogo(prev => !prev); }, 800);
     return () => clearInterval(logoInterval);
   }, [phase]);
 
-  // 3. Logic Random Text
   useEffect(() => {
-    const textPool = phase === 'thinking' ? THINKING_TEXTS : SEARCHING_TEXTS;
-    
+    const textPool = phase === 'thinking' ? t.thinkingStatus : t.searchingStatus;
+    setStatusText(textPool[0]);
+
     const textInterval = setInterval(() => {
       const randomText = textPool[Math.floor(Math.random() * textPool.length)];
       setStatusText(randomText);
-    }, 1500); // Ganti teks setiap 1.5 detik
-
+    }, 1500);
     return () => clearInterval(textInterval);
-  }, [phase]);
+  }, [phase, language]); 
 
-  // 4. Logic Loading Dots (...)
   useEffect(() => {
-    const dotInterval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? "" : prev + ".");
-    }, 500);
+    const dotInterval = setInterval(() => { setDots(prev => prev.length >= 3 ? "" : prev + "."); }, 500);
     return () => clearInterval(dotInterval);
   }, []);
 
   return (
     <div className="flex flex-col items-start gap-2">
-      {/* AVATAR DENGAN CONIC BORDER */}
       <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
-        {/* Spinning Conic Gradient */}
         <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,transparent_40deg,#a855f7_100deg,#ec4899_180deg,#f97316_260deg,#3b82f6_360deg)] animate-spin-slow"></div>
-        {/* Mask Inner (White Background) */}
         <div className="absolute inset-[2px] bg-white rounded-full"></div>
-        
-        {/* Logo Image (Switching Logic) */}
         <div className="relative z-10 w-full h-full flex items-center justify-center transition-opacity duration-300">
           <img 
             src={showGoogleLogo ? GOOGLE_LOGO_URL : AI_LOGO_URL} 
@@ -110,8 +81,6 @@ const StreamingAvatarAndStatus: React.FC<{ isPro: boolean }> = ({ isPro }) => {
           />
         </div>
       </div>
-
-      {/* STATUS TEXT DI BAWAH AVATAR (Visualisasi Searching) */}
       <div className="ml-1 flex items-center gap-2 animate-fadeIn">
         <span className="text-xs font-medium bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-600">
           {statusText}{dots}
@@ -121,37 +90,41 @@ const StreamingAvatarAndStatus: React.FC<{ isPro: boolean }> = ({ isPro }) => {
   );
 };
 
-
-// Komponen internal untuk rotasi teks loading gambar
-const LoadingImageText = () => {
-  const [textIndex, setTextIndex] = useState(0);
-  const texts = [
-    "Creating image...",
-    "Just a few seconds more...",
-    "Almost done...",
-    "Adding final touches..."
-  ];
+// 1.5 Loading Image Text (Animating)
+const LoadingImageText: React.FC<{ language: Language }> = ({ language }) => {
+  const [text, setText] = useState("");
+  const [dots, setDots] = useState("");
+  const t = TRANSLATIONS[language].chat;
 
   useEffect(() => {
+    const texts = t.generatingImage;
+    setText(texts[0]);
+    
+    let idx = 0;
     const interval = setInterval(() => {
-      setTextIndex((prev) => (prev + 1) % texts.length);
+      idx = (idx + 1) % texts.length;
+      setText(texts[idx]);
     }, 2500);
     return () => clearInterval(interval);
+  }, [language]);
+
+  useEffect(() => {
+    const dotInterval = setInterval(() => { setDots(prev => prev.length >= 3 ? "" : prev + "."); }, 500);
+    return () => clearInterval(dotInterval);
   }, []);
 
   return (
-    <div className="flex items-center gap-3 text-gray-500 bg-gray-50 px-4 py-3 rounded-xl w-fit border border-gray-100 shadow-sm">
-      <Loader2 size={18} className="animate-spin text-pink-500" />
-      <span key={textIndex} className="text-sm font-medium animate-fadeIn">
-        {texts[textIndex]}
-      </span>
+    <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100 animate-pulse">
+       <ImageIcon size={20} className="text-pink-500 animate-bounce" />
+       <span className="text-sm font-medium text-gray-600 tracking-wide">{text}{dots}</span>
     </div>
   );
 };
 
-// Komponen Kotak Thinking (CoT)
-const ThinkingBox: React.FC<{ content: string; isStreaming: boolean }> = ({ content, isStreaming }) => {
+// 2. Thinking Box
+const ThinkingBox: React.FC<{ content: string; isStreaming: boolean; language: Language }> = ({ content, isStreaming, language }) => {
   const [isOpen, setIsOpen] = useState(true); 
+  const t = TRANSLATIONS[language].chat;
 
   if (!content) return null;
 
@@ -166,21 +139,18 @@ const ThinkingBox: React.FC<{ content: string; isStreaming: boolean }> = ({ cont
           <div className={`p-1.5 rounded-full ${isStreaming ? 'bg-pink-100' : 'bg-gray-200'}`}>
             <Brain size={14} className={isStreaming ? "text-pink-600 animate-pulse" : "text-gray-500"} />
           </div>
-          <span className="uppercase tracking-wider">
-            {isStreaming ? "Thinking Process" : "Thinking Process"}
-          </span>
+          <span className="uppercase tracking-wider">{t.thinkingHeader}</span>
         </div>
         <div className="flex items-center gap-2">
           {isStreaming && <Loader2 size={12} className="animate-spin text-pink-400" />}
           {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </div>
       </button>
-      
       {isOpen && (
         <div className="px-5 py-4 text-sm text-gray-600 font-mono leading-relaxed whitespace-pre-wrap bg-gray-50/30 border-t border-pink-50 animate-fadeIn">
           <div className="flex gap-2 opacity-70 mb-2">
             <Lightbulb size={12} className="mt-0.5 text-yellow-500" />
-            <span className="text-[10px] font-semibold text-gray-400 uppercase">Analysis Stream</span>
+            <span className="text-[10px] font-semibold text-gray-400 uppercase">{t.analysis}</span>
           </div>
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
@@ -189,157 +159,285 @@ const ThinkingBox: React.FC<{ content: string; isStreaming: boolean }> = ({ cont
   );
 };
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionClick }) => {
+// 3. Message Actions
+const MessageActions: React.FC<{ text: string; language: Language }> = ({ text, language }) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const t = TRANSLATIONS[language].chat;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'GenzAI Response', text: text });
+      } catch (err) { console.log('Share canceled'); }
+    } else {
+      handleCopy();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 mt-4 opacity-100 transition-opacity duration-300">
+      <button 
+        onClick={handleCopy}
+        className="p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all active:scale-95 group relative"
+        title={t.copy}
+      >
+        {isCopied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
+      </button>
+      <button 
+        onClick={handleLike}
+        className={`p-2 rounded-full transition-all active:scale-95 hover:bg-pink-50 ${isLiked ? 'text-pink-500 bg-pink-50' : 'text-gray-400 hover:text-pink-400'}`}
+        title="Like"
+      >
+        <Heart size={18} className={isLiked ? "fill-current animate-[bounce_0.4s_ease-in-out]" : ""} />
+      </button>
+      <button 
+        onClick={handleShare}
+        className="p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-all active:scale-95"
+        title={t.share}
+      >
+        <Share2 size={18} />
+      </button>
+    </div>
+  );
+};
+
+// 4. Source Drawer
+interface SourceDrawerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  sources: any[];
+  language: Language;
+}
+
+const SourceDrawer: React.FC<SourceDrawerProps> = ({ isOpen, onClose, sources, language }) => {
+  const t = TRANSLATIONS[language].chat;
+  return (
+    <>
+      <div 
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-50 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+      />
+      <div 
+        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl z-50 p-6 max-h-[70vh] overflow-y-auto transform transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="flex items-center justify-between mb-6 sticky top-0 bg-white pb-2 border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-50 rounded-full text-blue-600">
+               <Globe size={20} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800">{t.sources}</h3>
+          </div>
+          <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 text-gray-500">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {sources.map((chunk, i) => chunk.web ? (
+            <a 
+              key={i} 
+              href={chunk.web.uri} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group"
+            >
+              <div className="mt-1 min-w-[20px]">
+                 <ExternalLink size={16} className="text-gray-400 group-hover:text-blue-500" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-800 text-sm mb-0.5 group-hover:text-blue-700">
+                  {chunk.web.title}
+                </h4>
+                <p className="text-xs text-gray-500 truncate max-w-[250px] sm:max-w-md">
+                  {chunk.web.uri}
+                </p>
+              </div>
+            </a>
+          ) : null)}
+        </div>
+        <div className="h-6" />
+      </div>
+    </>
+  );
+};
+
+
+// --- MAIN CHAT INTERFACE ---
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSuggestionClick, language }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [activeSource, setActiveSource] = useState<any[] | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Saran teks sederhana
   const suggestions = ["Jelaskan lebih lanjut", "Berikan contoh lain", "Ringkas penjelasan di atas"];
+  const t = TRANSLATIONS[language].chat;
 
-  // Helper untuk memisahkan konten Thinking dan Jawaban
   const parseContent = (text: string) => {
-    // 1. Cek tag lengkap (Regex yang lebih robust terhadap spasi dan case)
     const completeRegex = /<\s*thinking\s*>([\s\S]*?)<\/\s*thinking\s*>/i;
     const match = text.match(completeRegex);
-    
-    if (match) {
-      return {
-        thinking: match[1].trim(),
-        content: text.replace(completeRegex, '').trim()
-      };
-    }
+    if (match) return { thinking: match[1].trim(), content: text.replace(completeRegex, '').trim() };
 
-    // 2. Cek tag pembuka (untuk streaming atau jika tag penutup belum muncul)
     const openTagRegex = /<\s*thinking\s*>/i;
     if (openTagRegex.test(text)) {
       const parts = text.split(openTagRegex);
-      // parts[0] adalah konten sebelum tag (biasanya kosong)
-      // parts[1] adalah konten thinking yang sedang berjalan
-      return {
-        thinking: parts[1] ? parts[1].trim() : "", 
-        content: parts[0] ? parts[0].trim() : "" 
-      };
+      return { thinking: parts[1] ? parts[1].trim() : "", content: parts[0] ? parts[0].trim() : "" };
     }
+    return { thinking: null, content: text };
+  };
 
-    // 3. Tidak ada thinking tag sama sekali
-    return {
-      thinking: null,
-      content: text
-    };
+  const getSourceLabel = (chunks: any[]) => {
+    const webChunks = chunks.filter(c => c.web);
+    if (webChunks.length === 0) return "Sources";
+    const firstTitle = webChunks[0].web.title.split(' - ')[0].split('|')[0].trim();
+    if (webChunks.length === 1) return firstTitle;
+    return `${firstTitle} +${webChunks.length - 1}`;
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-48 pt-20 scrollbar-hide">
-      <div className="max-w-3xl mx-auto space-y-8">
-        {messages.map((msg, idx) => {
-          const { thinking, content } = parseContent(msg.text);
-          // Deteksi apakah ini model Pro untuk efek visual searching
-          const isProModel = true; // Di sini kita asumsikan true untuk visual, idealnya cek session config
+    <>
+      <div className="flex-1 overflow-y-auto px-4 pb-48 pt-20 scrollbar-hide">
+        <div className="max-w-3xl mx-auto space-y-8">
+          {messages.map((msg, idx) => {
+            const { thinking, content } = parseContent(msg.text);
+            const isProModel = true;
 
-          return (
-            <div 
-              key={idx} 
-              className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`relative max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                
-                {/* 
-                  IDENTITAS AI 
-                */}
-                {msg.role === 'model' && (
-                  <div className="mb-3 pl-1 animate-fadeIn">
-                    {msg.isStreaming && !msg.isGeneratingImage ? (
-                      // LOADING STATE KHUSUS (Thinking -> Searching Visuals)
-                      <StreamingAvatarAndStatus isPro={isProModel} />
-                    ) : (
-                      // FINISHED STATE: Static Logo
-                      <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
-                         <img src={AI_LOGO_URL} alt="GenzAI" className="w-8 h-8 opacity-100" />
+            return (
+              <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`relative max-w-[90%] md:max-w-[85%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                  
+                  {/* AI Identity */}
+                  {msg.role === 'model' && (
+                    <div className="mb-3 pl-1 animate-fadeIn">
+                      {msg.isStreaming ? (
+                        <StreamingAvatarAndStatus isPro={isProModel} language={language} />
+                      ) : (
+                        <div className="relative w-10 h-10 flex items-center justify-center transition-all duration-500">
+                           <img src={AI_LOGO_URL} alt="GenzAI" className="w-8 h-8 opacity-100" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Message Bubble/Content */}
+                  <div className={`prose prose-p:text-gray-700 prose-headings:text-gray-800 prose-strong:text-gray-900 prose-code:text-pink-600 prose-pre:bg-gray-900 prose-pre:text-gray-100 ${msg.role === 'user' ? 'text-gray-800 text-lg font-medium' : 'text-gray-600 leading-relaxed'}`}>
+                    
+                    {/* ATTACHMENT PREVIEW (USER) */}
+                    {msg.role === 'user' && msg.attachment && (
+                      <div className="mb-3 flex justify-end animate-fadeIn">
+                        <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm inline-flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden">
+                             {msg.attachment.mimeType.startsWith('image/') ? (
+                               <img 
+                                 src={`data:${msg.attachment.mimeType};base64,${msg.attachment.data}`} 
+                                 alt="Attached" 
+                                 className="w-full h-full object-cover"
+                               />
+                             ) : (
+                               <FileText size={20} className="text-gray-400" />
+                             )}
+                          </div>
+                          <div className="text-left pr-2">
+                            <span className="block text-[10px] text-gray-400 uppercase font-bold">{msg.attachment.mimeType.split('/')[1]}</span>
+                            <span className="text-xs text-gray-600 font-medium">Attachment</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* --- Image Gen Status (Loading) --- */}
+                    {msg.isGeneratingImage && (
+                        <div className="mb-4">
+                            <LoadingImageText language={language} />
+                        </div>
+                    )}
+
+                    {/* --- Generated Image Result --- */}
+                    {msg.image && (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-gray-200 shadow-lg animate-fadeIn max-w-sm">
+                        <img 
+                            src={msg.image} 
+                            alt="Generated by AI" 
+                            className="w-full h-auto object-cover"
+                            onClick={() => window.open(msg.image, '_blank')}
+                        />
+                      </div>
+                    )}
+
+                    {msg.role === 'model' && thinking && (
+                      <ThinkingBox content={thinking} isStreaming={!!msg.isStreaming} language={language} />
+                    )}
+
+                    {content && (
+                       <ReactMarkdown>{content}</ReactMarkdown>
+                    )}
+
+                    {/* Source Grounding Chip */}
+                    {msg.groundingMetadata && msg.groundingMetadata.groundingChunks && (
+                      <div className="mt-4 pt-2 animate-fadeIn">
+                         <button 
+                           onClick={() => setActiveSource(msg.groundingMetadata.groundingChunks)}
+                           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
+                         >
+                           <div className="bg-blue-50 text-blue-600 p-1 rounded-full">
+                              <Globe size={14} />
+                           </div>
+                           <span className="text-xs font-semibold text-gray-700 group-hover:text-blue-600">
+                             {getSourceLabel(msg.groundingMetadata.groundingChunks)}
+                           </span>
+                           <ChevronRight size={14} className="text-gray-400 group-hover:text-blue-500" />
+                         </button>
                       </div>
                     )}
                   </div>
-                )}
 
-                {/* Konten Pesan */}
-                <div className={`prose prose-p:text-gray-700 prose-headings:text-gray-800 prose-strong:text-gray-900 prose-code:text-pink-600 prose-pre:bg-gray-900 prose-pre:text-gray-100 ${msg.role === 'user' ? 'text-gray-800 text-lg font-medium' : 'text-gray-600 leading-relaxed'}`}>
-                  
-                  {/* Render Gambar jika ada */}
-                  {msg.image && (
-                    <div className="mb-4 rounded-xl overflow-hidden border border-gray-200 shadow-sm animate-fadeIn">
-                      <img src={msg.image} alt="Generated by AI" className="w-full h-auto object-cover max-h-96" />
-                      <div className="bg-gray-50 px-3 py-2 flex items-center gap-2 text-xs text-gray-500">
-                        <ImageIcon size={12} /> Generated with Genz Imagen
-                      </div>
+                  {/* Message Actions (Only for AI) */}
+                  {msg.role === 'model' && !msg.isStreaming && !msg.isGeneratingImage && content && (
+                    <MessageActions text={content} language={language} />
+                  )}
+
+                  {/* Suggestions */}
+                  {msg.role === 'model' && !msg.isStreaming && !msg.isGeneratingImage && !msg.image && idx === messages.length - 1 && (
+                    <div className="mt-6 flex flex-wrap gap-2 animate-fadeIn">
+                      {suggestions.map((sug, i) => (
+                        <button
+                          key={i}
+                          onClick={() => onSuggestionClick(sug)}
+                          className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-pink-300 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        >
+                          {sug}
+                        </button>
+                      ))}
                     </div>
                   )}
-
-                  {/* Render Thinking Box */}
-                  {msg.role === 'model' && thinking && (
-                    <ThinkingBox content={thinking} isStreaming={!!msg.isStreaming} />
-                  )}
-
-                  {/* Render Teks Utama */}
-                  {content ? (
-                     <ReactMarkdown>{content}</ReactMarkdown>
-                  ) : (
-                    /* Loading State Khusus Gambar */
-                    msg.isGeneratingImage && (
-                        <LoadingImageText />
-                    )
-                  )}
-
-                  {/* Render Google Search Grounding Metadata */}
-                  {msg.groundingMetadata && msg.groundingMetadata.groundingChunks && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 animate-fadeIn">
-                       <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                         <Globe size={12} />
-                         Sources found
-                       </div>
-                       <div className="flex flex-wrap gap-2">
-                         {msg.groundingMetadata.groundingChunks.map((chunk: any, i: number) => 
-                           chunk.web ? (
-                             <a 
-                               key={i} 
-                               href={chunk.web.uri} 
-                               target="_blank" 
-                               rel="noopener noreferrer"
-                               className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-blue-600 hover:text-blue-800 hover:border-blue-200 hover:shadow-sm transition-all"
-                             >
-                               <span className="truncate max-w-[150px]">{chunk.web.title || "Source Link"}</span>
-                               <ExternalLink size={10} />
-                             </a>
-                           ) : null
-                         )}
-                       </div>
-                    </div>
-                  )}
-
                 </div>
-
-                {/* Saran Teks */}
-                {msg.role === 'model' && !msg.isStreaming && !msg.image && idx === messages.length - 1 && (
-                  <div className="mt-6 flex flex-wrap gap-2 animate-fadeIn">
-                    {suggestions.map((sug, i) => (
-                      <button
-                        key={i}
-                        onClick={() => onSuggestionClick(sug)}
-                        className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:border-pink-300 hover:text-pink-600 hover:bg-pink-50 transition-colors"
-                      >
-                        {sug}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-            </div>
-          );
-        })}
-        <div ref={bottomRef} />
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
       </div>
-    </div>
+
+      <SourceDrawer 
+        isOpen={!!activeSource} 
+        onClose={() => setActiveSource(null)} 
+        sources={activeSource || []}
+        language={language}
+      />
+    </>
   );
 };
 

@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { X, MessageSquare, Settings, HelpCircle, Plus, History, Trash2 } from 'lucide-react';
-import { ChatSession } from '../types';
+import { ChatSession, Language } from '../types';
+import { TRANSLATIONS } from '../translations';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface SidebarProps {
   currentSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
   onDeleteSession: (sessionId: string, e: React.MouseEvent) => void;
+  onOpenSettings: () => void;
+  language: Language;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -20,8 +23,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   sessions, 
   currentSessionId, 
   onSelectSession,
-  onDeleteSession
+  onDeleteSession,
+  onOpenSettings,
+  language
 }) => {
+  const t = TRANSLATIONS[language].sidebar;
+
   return (
     <>
       {/* Backdrop Overlay */}
@@ -65,27 +72,26 @@ const Sidebar: React.FC<SidebarProps> = ({
           <button 
             onClick={() => {
               onNewChat();
-              onClose(); // Optional: close sidebar on new chat
+              onClose(); 
             }}
             className="w-full flex items-center gap-3 px-4 py-3 bg-gray-900 text-white rounded-xl shadow-lg hover:bg-gray-800 hover:scale-[1.02] active:scale-95 transition-all duration-200 group"
           >
             <div className="p-1 bg-white/20 rounded-full group-hover:rotate-90 transition-transform duration-300">
               <Plus size={16} />
             </div>
-            <span className="font-medium">New Chat</span>
+            <span className="font-medium">{t.newChat}</span>
           </button>
 
           {/* Recent Chats Section */}
           <div className="space-y-2">
             <div className="px-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
               <History size={12} />
-              Recent
+              {t.recent}
             </div>
             
             {sessions.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 italic">
-                No chat history yet.
-                <br />Start a conversation!
+              <div className="px-4 py-8 text-center text-sm text-gray-400 italic whitespace-pre-line">
+                {t.noHistory}
               </div>
             ) : (
               sessions.map((session) => (
@@ -108,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={(e) => onDeleteSession(session.id, e)}
                     className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-all absolute right-2"
-                    title="Delete Chat"
+                    title={t.deleteConfirm}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -120,13 +126,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+          <button 
+            onClick={() => {
+              onOpenSettings();
+              onClose();
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+          >
             <Settings size={18} className="text-gray-400" />
-            <span>Settings</span>
+            <span>{t.settings}</span>
           </button>
           <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
             <HelpCircle size={18} className="text-gray-400" />
-            <span>Help & FAQ</span>
+            <span>{t.help}</span>
           </button>
         </div>
       </div>

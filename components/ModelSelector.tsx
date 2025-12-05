@@ -2,16 +2,20 @@
 import React from 'react';
 import { MODELS } from '../constants';
 import { Check, X } from 'lucide-react';
-import { GeminiModel } from '../types';
+import { GeminiModel, Language } from '../types';
+import { TRANSLATIONS } from '../translations';
 
 interface ModelSelectorProps {
   isOpen: boolean;
   onClose: () => void;
   currentModel: string;
   onSelectModel: (modelId: GeminiModel) => void;
+  language: Language;
 }
 
-const ModelSelector: React.FC<ModelSelectorProps> = ({ isOpen, onClose, currentModel, onSelectModel }) => {
+const ModelSelector: React.FC<ModelSelectorProps> = ({ isOpen, onClose, currentModel, onSelectModel, language }) => {
+  const t = TRANSLATIONS[language].modelSelector;
+
   return (
     <>
       {/* Backdrop */}
@@ -25,7 +29,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isOpen, onClose, currentM
         className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl z-50 p-6 transform transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-800">Pilih Model</h3>
+          <h3 className="text-xl font-bold text-gray-800">{t.title}</h3>
           <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
             <X size={20} className="text-gray-600" />
           </button>
