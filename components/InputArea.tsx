@@ -24,6 +24,7 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = TRANSLATIONS[language];
+  const tModels = TRANSLATIONS[language].models;
 
   const handleSubmit = () => {
     if ((text.trim() || attachment) && !isLoading) {
@@ -76,7 +77,8 @@ const InputArea: React.FC<InputAreaProps> = ({ onSend, isChatStarted, isLoading,
     ? "fixed bottom-8 left-0 right-0 px-4 transition-all duration-700 ease-in-out z-20"
     : "fixed top-1/2 left-0 right-0 -translate-y-1/2 px-4 transition-all duration-700 ease-in-out z-20";
 
-  const modelName = MODELS.find(m => m.id === selectedModel)?.name || 'Genz 2.5 Pro';
+  // Ambil nama model dari translasi
+  const modelName = tModels[selectedModel]?.name || 'Genz 2.5 Pro';
   
   // Logic Placeholder Dinamis
   const placeholderText = selectedModel === GeminiModel.IMAGE_GEN 

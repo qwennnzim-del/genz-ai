@@ -15,6 +15,7 @@ interface ModelSelectorProps {
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ isOpen, onClose, currentModel, onSelectModel, language }) => {
   const t = TRANSLATIONS[language].modelSelector;
+  const tModels = TRANSLATIONS[language].models;
 
   return (
     <>
@@ -36,40 +37,45 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isOpen, onClose, currentM
         </div>
 
         <div className="space-y-4">
-          {MODELS.map((model) => (
-            <button
-              key={model.id}
-              onClick={() => {
-                onSelectModel(model.id as GeminiModel);
-                onClose();
-              }}
-              className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-start justify-between group
-                ${currentModel === model.id 
-                  ? 'border-pink-500 bg-pink-50/50 shadow-sm ring-1 ring-pink-500/20' 
-                  : 'border-gray-200 hover:border-pink-300 hover:bg-gray-50'}`}
-            >
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`font-semibold ${currentModel === model.id ? 'text-pink-600' : 'text-gray-800'}`}>
-                    {model.name}
-                  </span>
-                  {model.isNew && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 rounded-full uppercase tracking-wider shadow-sm">
-                      NEW
+          {MODELS.map((model) => {
+            const translatedName = tModels[model.id as GeminiModel]?.name || model.name;
+            const translatedDesc = tModels[model.id as GeminiModel]?.description || model.description;
+
+            return (
+              <button
+                key={model.id}
+                onClick={() => {
+                  onSelectModel(model.id as GeminiModel);
+                  onClose();
+                }}
+                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-start justify-between group
+                  ${currentModel === model.id 
+                    ? 'border-pink-500 bg-pink-50/50 shadow-sm ring-1 ring-pink-500/20' 
+                    : 'border-gray-200 hover:border-pink-300 hover:bg-gray-50'}`}
+              >
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`font-semibold ${currentModel === model.id ? 'text-pink-600' : 'text-gray-800'}`}>
+                      {translatedName}
                     </span>
-                  )}
+                    {model.isNew && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 rounded-full uppercase tracking-wider shadow-sm">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500 leading-relaxed">
+                    {translatedDesc}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500 leading-relaxed">
-                  {model.description}
-                </div>
-              </div>
-              {currentModel === model.id && (
-                <div className="mt-1 text-pink-500">
-                  <Check size={20} />
-                </div>
-              )}
-            </button>
-          ))}
+                {currentModel === model.id && (
+                  <div className="mt-1 text-pink-500">
+                    <Check size={20} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
         
         <div className="h-4" /> {/* Spacer bottom */}
