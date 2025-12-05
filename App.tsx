@@ -4,8 +4,10 @@ import Header from './components/Header';
 import ChatInterface from './components/ChatInterface';
 import InputArea from './components/InputArea';
 import Sidebar from './components/Sidebar';
-import { GeminiModel, Message, Attachment, ChatSession } from './types';
-import { streamGeminiResponse, generateImage, enhanceImagePrompt } from './services/geminiService';
+import SettingsModal from './components/SettingsModal';
+import { GeminiModel, Message, Attachment, ChatSession, Language } from './types';
+import { streamGeminiResponse, generateImage } from './services/geminiService';
+import { TRANSLATIONS } from './translations';
 
 function App() {
   // State untuk sesi & history
@@ -17,6 +19,10 @@ function App() {
   const [selectedModel, setSelectedModel] = useState<GeminiModel>(GeminiModel.FLASH_2_5);
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // State Bahasa (Default Indonesia)
+  const [language, setLanguage] = useState<Language>('id');
 
   // Load history dari LocalStorage saat pertama kali buka
   useEffect(() => {
@@ -28,6 +34,11 @@ function App() {
         console.error("Failed to parse history", e);
       }
     }
+    // Load language preference
+    const savedLang = localStorage.getItem('genzai_language');
+    if (savedLang) {
+      setLanguage(savedLang as Language);
+    }
   }, []);
 
   // Simpan ke LocalStorage setiap ada perubahan sessions
@@ -35,13 +46,10 @@ function App() {
     localStorage.setItem('genzai_sessions', JSON.stringify(sessions));
   }, [sessions]);
 
-  // Fungsi untuk update pesan di sesi saat ini
-  const updateCurrentSessionMessages = (newMessages: Message[]) => {
-    if (currentSessionId) {
-      setSessions(prev => prev.map(s => 
-        s.id === currentSessionId ? { ...s, messages: newMessages, lastModified: Date.now() } : s
-      ));
-    }
+  // Simpan bahasa ke LocalStorage
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang);
+    localStorage.setItem('genzai_language', lang);
   };
 
   const handleSend = useCallback(async (text: string, attachment?: Attachment) => {
@@ -82,11 +90,13 @@ function App() {
     setIsLoading(true);
 
     // 3. Siapkan Placeholder Pesan AI
-    const isImageGen = selectedModel === GeminiModel.FLASH_IMAGE_2_5;
+    // Khusus untuk Image Gen, gunakan flag isGeneratingImage
+    const isImageGen = selectedModel === GeminiModel.IMAGE_GEN;
+    
     const aiMessagePlaceholder: Message = { 
       role: 'model', 
       text: '', 
-      isStreaming: true, 
+      isStreaming: !isImageGen, 
       isGeneratingImage: isImageGen,
       timestamp: Date.now() 
     };
@@ -95,88 +105,80 @@ function App() {
     setMessages(prev => [...prev, aiMessagePlaceholder]);
 
     try {
-      // --- MODE GENERATE IMAGE ---
-      if (selectedModel === GeminiModel.FLASH_IMAGE_2_5) {
-        let promptToUse = text;
-        // Enhance prompt (opsional, silent fail jika error)
-        try { promptToUse = await enhanceImagePrompt(text); } catch (e) {}
-
-        const imageBase64 = await generateImage(promptToUse);
-
-        if (imageBase64) {
+        if (isImageGen) {
+          // --- MODE IMAGE GEN (Hugging Face) ---
+          const imageBase64 = await generateImage(text);
+          
           setMessages(prev => {
             const newMsgs = [...prev];
             const lastMsg = newMsgs[newMsgs.length - 1];
-            if (lastMsg) {
-              lastMsg.text = `Here is the generated image for: "${text}"`; 
-              lastMsg.image = imageBase64;
+            if (lastMsg.role === 'model') {
               lastMsg.isGeneratingImage = false;
-              lastMsg.isStreaming = false;
+              lastMsg.image = imageBase64;
+              lastMsg.text = "Berikut adalah gambar yang Anda minta:";
             }
-            // Sync ke session storage
             if (sessionId) {
               setSessions(s => s.map(sess => sess.id === sessionId ? { ...sess, messages: newMsgs } : sess));
             }
             return newMsgs;
           });
+
         } else {
-             throw new Error("Gagal generate gambar.");
-        }
+            // --- MODE CHAT (TEXT/MULTIMODAL) ---
+            // Prepare history for API (clean text only parts for context, backend handles the rest)
+            const historyForApi = updatedMessages.map(m => ({
+              role: m.role,
+              parts: [{ text: m.text }] 
+            }));
 
-      } else {
-        // --- MODE CHAT (TEXT/MULTIMODAL) ---
-        // Backend kita (/api/chat) akan handle attachment
-        
-        // Prepare history for API (clean text only parts for context, backend handles the rest)
-        // Kita kirim history mentah, service/backend akan format
-        const historyForApi = updatedMessages.map(m => ({
-           role: m.role,
-           parts: [{ text: m.text }] // Attachment biasanya dikirim di turn saat ini saja
-        }));
+            // Pass 'language' to the service
+            const stream = await streamGeminiResponse(selectedModel, text, historyForApi, attachment, language);
 
-        const stream = await streamGeminiResponse(selectedModel, text, historyForApi, attachment);
+            let accumulatedText = "";
 
-        let accumulatedText = "";
+            for await (const chunk of stream) {
+              const chunkText = chunk.text();
+              const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata;
 
-        for await (const chunk of stream) {
-          const chunkText = chunk.text();
-          const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata;
-
-          if (chunkText || groundingMetadata) {
-            if (chunkText) accumulatedText += chunkText;
-            
-            setMessages(prev => {
-              const newMsgs = [...prev];
-              const lastMsg = newMsgs[newMsgs.length - 1];
-              if (lastMsg.role === 'model') {
-                lastMsg.text = accumulatedText;
-                if (groundingMetadata) lastMsg.groundingMetadata = groundingMetadata;
+              if (chunkText || groundingMetadata) {
+                if (chunkText) accumulatedText += chunkText;
+                
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastMsg = newMsgs[newMsgs.length - 1];
+                  if (lastMsg.role === 'model') {
+                    lastMsg.text = accumulatedText;
+                    if (groundingMetadata) lastMsg.groundingMetadata = groundingMetadata;
+                  }
+                  return newMsgs;
+                });
               }
-              return newMsgs;
-            });
-          }
-        }
-        
-        // Final sync ke session storage setelah streaming selesai
-        setMessages(finalMsgs => {
-            const newMsgs = [...finalMsgs];
-             if (sessionId) {
-              setSessions(s => s.map(sess => sess.id === sessionId ? { ...sess, messages: newMsgs } : sess));
             }
-            return newMsgs;
-        });
-      }
+            
+            // Final sync ke session storage setelah streaming selesai
+            setMessages(finalMsgs => {
+                const newMsgs = [...finalMsgs];
+                if (sessionId) {
+                  setSessions(s => s.map(sess => sess.id === sessionId ? { ...sess, messages: newMsgs } : sess));
+                }
+                return newMsgs;
+            });
+        }
 
     } catch (error: any) {
-      console.error("Error:", error);
+      console.error("Handler Error:", error);
+      
       setMessages(prev => {
         const newMsgs = [...prev];
         const lastMsg = newMsgs[newMsgs.length - 1];
         if (lastMsg.role === 'model') {
-          const errorMessage = error.message.replace('API Error:', '').trim();
-          lastMsg.text = `⚠️ **Error**\n\n${errorMessage}`;
-          lastMsg.isGeneratingImage = false;
+          // Bersihkan pesan error dari prefix 'API Error:'
+          const rawMsg = error.message || "Unknown error";
+          const displayMsg = rawMsg.replace('API Error:', '').trim();
+          
+          lastMsg.text = `⚠️ **Gagal**\n\n${displayMsg}`;
           lastMsg.isStreaming = false;
+          lastMsg.isGeneratingImage = false;
         }
         if (sessionId) {
             setSessions(s => s.map(sess => sess.id === sessionId ? { ...sess, messages: newMsgs } : sess));
@@ -188,11 +190,14 @@ function App() {
       setMessages(prev => {
          const newMsgs = [...prev];
          const lastMsg = newMsgs[newMsgs.length - 1];
-         if (lastMsg) lastMsg.isStreaming = false;
+         if (lastMsg) {
+             lastMsg.isStreaming = false;
+             lastMsg.isGeneratingImage = false;
+         }
          return newMsgs;
       });
     }
-  }, [messages, selectedModel, currentSessionId]);
+  }, [messages, selectedModel, currentSessionId, language]); 
 
   // Handle New Chat
   const handleNewChat = () => {
@@ -221,6 +226,13 @@ function App() {
     }
   };
 
+  // Handle Clear All History
+  const handleClearAllHistory = () => {
+    setSessions([]);
+    localStorage.removeItem('genzai_sessions');
+    handleNewChat();
+  };
+
   const hasStarted = messages.length > 0;
 
   return (
@@ -234,6 +246,16 @@ function App() {
         currentSessionId={currentSessionId}
         onSelectSession={handleSelectSession}
         onDeleteSession={handleDeleteSession}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        language={language}
+      />
+
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onClearHistory={handleClearAllHistory}
+        currentLanguage={language}
+        onSelectLanguage={handleLanguageChange}
       />
 
       <Header 
@@ -246,6 +268,7 @@ function App() {
           <ChatInterface 
             messages={messages} 
             onSuggestionClick={(text) => handleSend(text)}
+            language={language}
           />
         )}
       </main>
@@ -256,6 +279,7 @@ function App() {
         isLoading={isLoading}
         selectedModel={selectedModel}
         onSelectModel={setSelectedModel}
+        language={language}
       />
     </div>
   );

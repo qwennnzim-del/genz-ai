@@ -4,13 +4,16 @@ export interface Attachment {
   data: string; // Base64 string
 }
 
+export type Language = 'id' | 'en' | 'jp';
+
 export interface Message {
   role: 'user' | 'model';
   text: string;
-  image?: string; // Untuk menampilkan gambar hasil generate (output AI)
+  image?: string; // Hasil generate gambar dari Hugging Face
   attachment?: Attachment; // Untuk file yang diupload user (input User)
   isStreaming?: boolean;
-  isGeneratingImage?: boolean;
+  isSearching?: boolean; // Indikator visual sedang searching
+  isGeneratingImage?: boolean; // Indikator sedang membuat gambar
   groundingMetadata?: any;
   timestamp: number;
 }
@@ -33,5 +36,5 @@ export enum GeminiModel {
   FLASH_2_5 = 'gemini-2.5-flash',
   FLASH_2_0 = 'gemini-2.0-flash',
   FLASH_LITE_2_0 = 'gemini-2.0-flash-lite-preview',
-  FLASH_IMAGE_2_5 = 'gemini-2.5-flash-image',
+  IMAGE_GEN = 'sdxl-image-gen', // Model ID khusus frontend
 }

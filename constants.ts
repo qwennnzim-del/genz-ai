@@ -4,24 +4,24 @@ import { GeminiModel, ModelOption } from './types';
 export const MODELS: ModelOption[] = [
   {
     id: GeminiModel.FLASH_2_5,
-    name: 'Genz 2.5 Pro', // Renamed from Gemini 2.5 Flash
-    description: 'Model penalaran mendalam, analisis tingkat lanjut, dan pencarian informasi real-time.',
+    name: 'Genz 2.5 Pro',
+    description: 'Penalaran Mendalam & Pencarian Real-time.',
     isNew: true,
   },
   {
     id: GeminiModel.FLASH_2_0,
-    name: 'Genz 2.0 Flash', // Renamed from Gemini 2.0 Flash
+    name: 'Genz 2.0 Flash',
     description: 'Kemampuan reasoning tingkat lanjut untuk tugas kompleks.',
   },
   {
     id: GeminiModel.FLASH_LITE_2_0,
-    name: 'Genz 2.0 Lite', // Renamed from Gemini 2.0 Flash Lite
+    name: 'Genz 2.0 Lite',
     description: 'Versi paling ringan untuk kecepatan respons maksimal.',
   },
   {
-    id: GeminiModel.FLASH_IMAGE_2_5,
-    name: 'Genz Imagen', // Renamed from Gemini 2.5 Flash Image
-    description: 'Model multimodal terbaru untuk membuat gambar.',
+    id: GeminiModel.IMAGE_GEN,
+    name: 'Genz Art (SDXL)',
+    description: 'Buat gambar artistik HD menggunakan Stable Diffusion XL.',
     isNew: true,
   },
 ];
