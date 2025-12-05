@@ -1,6 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Buffer } from 'buffer';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Kita tidak lagi menggunakan Google untuk gambar, tapi Hugging Face
+const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+// Model gratis terbaik saat ini: Stable Diffusion XL Base 1.0
+const MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"; 
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -10,57 +13,68 @@ export default async function handler(req: any, res: any) {
   try {
     const { prompt } = req.body;
     
-    // DEBUG LOG: Pastikan ini muncul di Log Vercel. Jika tidak, berarti kode lama masih berjalan.
-    console.log("--- MENGGUNAKAN MODEL IMAGEN 3 (imagen-3.0-generate-001) ---");
+    console.log("--- START GENERATE IMAGE (Hugging Face SDXL) ---");
     console.log("Prompt:", prompt);
 
-    // Menggunakan model Imagen 3 standar
-    const model = genAI.getGenerativeModel({ model: 'imagen-3.0-generate-001' });
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    
-    // Log struktur response untuk debugging jika kosong
-    console.log("Response Candidates:", JSON.stringify(response.candidates?.[0]?.content?.parts?.length || 0));
-
-    let base64Image = null;
-
-    // Parsing khusus untuk Imagen 3 (biasanya mengembalikan mimeType image/jpeg atau image/png)
-    if (response.candidates && response.candidates.length > 0) {
-       for (const part of response.candidates[0].content.parts) {
-         if (part.inlineData && part.inlineData.data) {
-            base64Image = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-            break;
-         }
-       }
+    if (!HF_API_KEY) {
+      throw new Error("HUGGINGFACE_API_KEY belum disetting di Environment Variable Vercel.");
     }
 
-    if (base64Image) {
-      res.status(200).json({ image: base64Image });
-    } else {
-      console.error("Gagal: Response valid tapi tidak ada data gambar.");
-      res.status(500).json({ error: "Model merespons, tetapi tidak ada gambar yang dihasilkan. Coba prompt yang lebih sederhana." });
+    // Panggil Hugging Face Inference API
+    const response = await fetch(
+      `https://api-inference.huggingface.co/models/${MODEL_ID}`,
+      {
+        headers: {
+          Authorization: `Bearer ${HF_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({ 
+          inputs: prompt,
+          parameters: {
+            // Parameter opsional agar gambar lebih bagus
+            negative_prompt: "blurry, low quality, bad anatomy, ugly, pixelated",
+            num_inference_steps: 25, 
+            guidance_scale: 7.5
+          } 
+        }),
+      }
+    );
+
+    if (!response.ok) {
+        const errText = await response.text();
+        console.error("HF Error:", errText);
+        
+        if (errText.includes("loading")) {
+            throw new Error("Model sedang loading (Cold Start). Coba 20 detik lagi.");
+        }
+        throw new Error(`Hugging Face Error: ${response.statusText}`);
     }
+
+    // Hugging Face mengembalikan Blob (Binary Image)
+    const imageBlob = await response.blob();
+    const arrayBuffer = await imageBlob.arrayBuffer();
+    // Fix: Ensure Buffer is available by importing it
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Convert ke Base64 agar bisa ditampilkan di Frontend
+    const base64Image = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+
+    console.log("--- SUCCESS: Image generated (SDXL) ---");
+    res.status(200).json({ image: base64Image });
 
   } catch (error: any) {
-    console.error('SERVER ERROR (Image Gen):', error);
+    console.error('--- ERROR GENERATE IMAGE ---', error);
     
+    let userMessage = "Gagal membuat gambar.";
     const errorMsg = error.message || '';
 
-    // Error Handling Khusus 429 / Quota
-    if (error.status === 429 || errorMsg.includes('429') || errorMsg.includes('Quota') || errorMsg.includes('limit')) {
-      return res.status(429).json({ 
-        error: "Kuota Harian Habis. Akun Google AI Free Tier memiliki batas harian untuk Imagen 3. Silakan coba lagi besok." 
-      });
+    if (errorMsg.includes('loading')) {
+      userMessage = "Model sedang 'pemanasan'. Silakan coba kirim ulang dalam 30 detik.";
+    } else if (errorMsg.includes('HUGGINGFACE_API_KEY')) {
+      userMessage = "API Key Hugging Face belum dipasang di server.";
     }
 
-    // Error Handling jika Model tidak ditemukan (biasanya salah region atau API Key tidak support)
-    if (errorMsg.includes('404') || errorMsg.includes('not found')) {
-      return res.status(404).json({
-        error: "Model Imagen 3 belum tersedia untuk API Key ini. Pastikan Anda menggunakan API Key dari Google AI Studio yang mendukung Imagen."
-      });
-    }
-
-    res.status(500).json({ error: error.message || "Gagal membuat gambar." });
+    res.status(500).json({ error: userMessage, details: errorMsg });
   }
 }

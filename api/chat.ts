@@ -9,10 +9,21 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { modelId, prompt, history, attachment } = req.body;
+    const { modelId, prompt, history, attachment, language } = req.body;
 
     let tools = undefined;
-    let systemInstruction = "Anda adalah GenzAI. Jawablah dengan sopan, cerdas, dan menggunakan format Markdown yang rapi. Selalu sertakan identitas 'GenzAI' jika diminta atau relevan.";
+    
+    // --- LANGUAGE INSTRUCTION ---
+    let langInstruction = "";
+    if (language === 'en') {
+        langInstruction = "ALWAYS reply in ENGLISH. Maintain a professional and helpful tone.";
+    } else if (language === 'jp') {
+        langInstruction = "ALWAYS reply in JAPANESE (日本語). Use polite and natural Japanese.";
+    } else {
+        langInstruction = "Jawablah selalu dalam BAHASA INDONESIA yang sopan, cerdas, dan natural.";
+    }
+
+    let systemInstruction = `Anda adalah GenzAI. ${langInstruction} Gunakan format Markdown yang rapi. Selalu sertakan identitas 'GenzAI' jika diminta atau relevan.`;
 
     if (modelId === 'gemini-2.5-flash') {
       tools = [{ googleSearch: {} }];
@@ -25,6 +36,7 @@ export default async function handler(req: any, res: any) {
       2. MULAI setiap respon Anda dengan blok <thinking> ... </thinking>.
       3. Analisis input (teks maupun gambar) secara mendalam di dalam blok thinking.
       4. Jika pertanyaan membutuhkan informasi terkini, gunakan Google Search.
+      5. Isi blok thinking boleh menggunakan bahasa Inggris atau bahasa pilihan user, tetapi jawaban akhir (setelah </thinking>) WAJIB sesuai bahasa yang dipilih (${language}).
       `;
       
       // --- ARTIFICIAL DELAY UNTUK VISUALISASI ---
